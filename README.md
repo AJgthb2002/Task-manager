@@ -1,5 +1,11 @@
 In the last milestone, we created a command line application to manage our tasks, although this is really good, it's not very user friendly and it's hard to quickly take a look at our pending tasks, to solve these issues, we will create a tiny server that can render our tasks in a nice way.
 
+## Screenshots
+<img src="https://user-images.githubusercontent.com/73184612/151142049-88d76b1b-ab2c-4e12-9ee7-6ef79ec36814.jpg" height="300px" width="550px">
+<img src="https://user-images.githubusercontent.com/73184612/151142080-fa4c5fe1-9344-4011-8fab-3ade479043ec.jpg" height="300px" width="550px">
+
+
+
 ## Usage
 
 ### 1. Help
