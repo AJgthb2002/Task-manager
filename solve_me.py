@@ -1,6 +1,13 @@
+from http.server import BaseHTTPRequestHandler, HTTPServer, SimpleHTTPRequestHandler
+
+
 class TasksCommand:
     TASKS_FILE = "tasks.txt"
     COMPLETED_TASKS_FILE = "completed.txt"
+
+    current_items = {}
+    completed_items = []
+
     usage_str="""
 Usage :-
 $ python tasks.py add 2 hello world         # Add a new item with priority 2 and text "hello world" to the list
@@ -9,10 +16,8 @@ $ python tasks.py del PRIORITY_NUMBER       # Delete the incomplete item with th
 $ python tasks.py done PRIORITY_NUMBER      # Mark the incomplete item with the given PRIORITY_NUMBER as complete
 $ python tasks.py help                      # Show usage
 $ python tasks.py report                    # Statistics
+$ python tasks.py runserver                 # Starts the tasks management server
 """
-
-    current_items = {}
-    completed_items = []
 
     def read_current(self):
         try:
@@ -22,14 +27,12 @@ $ python tasks.py report                    # Statistics
                 self.current_items[int(item[0])] = " ".join(item[1:])
             file.close()
         except Exception:
-            print("error while reading task.txt")
+            pass
 
     def read_completed(self):
         try:
             file = open(self.COMPLETED_TASKS_FILE, "r")
-            self.completed_items.clear()
-            for line in file.readlines():
-                self.completed_items.append(line[:-1])
+            self.completed_items = file.readlines()
             file.close()
         except Exception:
             pass
@@ -46,6 +49,14 @@ $ python tasks.py report                    # Statistics
             for item in self.completed_items:
                 f.write(f"{item}\n")
 
+    def runserver(self):
+        address = "127.0.0.1"
+        port = 8000
+        server_address = (address, port)
+        httpd = HTTPServer(server_address, TasksServer)
+        print(f"Started HTTP Server on http://{address}:{port}")
+        httpd.serve_forever()
+
     def run(self, command, args):
         self.read_current()
         self.read_completed()
@@ -59,6 +70,8 @@ $ python tasks.py report                    # Statistics
             self.ls()
         elif command == "report":
             self.report()
+        elif command == "runserver":
+            self.runserver()
         elif command == "help":
             self.help()
 
@@ -101,7 +114,6 @@ $ python tasks.py report                    # Statistics
             print(f"Error: item with priority {pr_to_del} does not exist. Nothing deleted.")    
         self.write_current()
 
-
     def ls(self):
         self.read_current()
         cnt=1
@@ -111,7 +123,6 @@ $ python tasks.py report                    # Statistics
                 print(f"{cnt}. {task} [{i}]")
                 cnt+=1    
 
-    
     def report(self):
         self.read_current()
         print(f"Pending : {len(self.current_items)}")
@@ -130,4 +141,72 @@ $ python tasks.py report                    # Statistics
             else:    
                 print(f"{i}. {self.completed_items[i-1]}")
 
+    def render_pending_tasks(self):
+        # Complete this method to return all incomplete tasks as HTML
+        self.read_current()
+        return_str="""
+        <head>
+        <style>
+        @import url('https://fonts.googleapis.com/css2?family=Lobster&display=swap');
+        body { background-color: powderblue; }
+        h1   {color: blue; text-align: center; font-family: 'Lobster', cursive;}
+        ol, li   {font-weight: bold; font-size:20px;}
+        .main {max-width:700px;  margin:0 auto;}
+        .tasks-box {padding: 40px; background-color: pink; margin:0 auto;}
+        </style>
+        </head>
+        <body><div class="main"><h1> Pending tasks: </h1>"""
+        return_str+="<div class='tasks-box'><ol>"
+        for i in sorted (self.current_items.keys()) :
+            task= self.current_items.get(i,None)
+            if task!=None:
+                return_str+=(f"<li> {task} [{i}] </li>")
+        return_str+="</ol></div>"
 
+        return_str+="</div></body>"
+
+        return return_str
+
+    def render_completed_tasks(self):
+        # Complete this method to return all completed tasks as HTML
+        self.read_completed()
+        return_str="""
+        <head>
+        <style>
+        @import url('https://fonts.googleapis.com/css2?family=Lobster&display=swap');
+        body { background-color: rgb(38, 172, 116); }
+        h1   {color: black; text-align: center; font-family: 'Lobster', cursive;}
+        ol, li   {font-weight: bold; font-size:20px;}
+        .main {max-width:700px;  margin:0 auto;}
+        .tasks-box {padding: 40px; background-color: rgb(231, 176, 112); margin:0 auto;}
+        </style>
+        </head>
+        <body><div class="main"><h1> Completed tasks: </h1>"""
+        
+        return_str+="<div class='tasks-box'><ol>"
+        for i in range(1,len(self.completed_items)+1):
+            return_str+=(f"<li> {self.completed_items[i-1]} </li>")
+
+        return_str+="</ol></div>"
+        return_str+="</div></body>"
+        return return_str
+
+
+class TasksServer(TasksCommand,  BaseHTTPRequestHandler): 
+
+    def do_GET(self):
+        task_command_object = TasksCommand()
+        if self.path== "/":
+            content = "<h2> Go to path  /tasks to see the pending tasks or path  /completed to view the list of completed tasks </h2>"
+        elif self.path == "/tasks":
+            content = task_command_object.render_pending_tasks()
+        elif self.path == "/completed":
+            content = task_command_object.render_completed_tasks()
+        else:
+            self.send_response(404)
+            self.end_headers()
+            return
+        self.send_response(200)
+        self.send_header("content-type", "text/html")
+        self.end_headers()
+        self.wfile.write(content.encode())
