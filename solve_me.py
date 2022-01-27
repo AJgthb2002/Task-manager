@@ -32,7 +32,10 @@ $ python tasks.py runserver                 # Starts the tasks management server
     def read_completed(self):
         try:
             file = open(self.COMPLETED_TASKS_FILE, "r")
-            self.completed_items = file.readlines()
+            self.completed_items.clear()
+            for line in file.readlines():
+                self.completed_items.append(line[:-1])
+            # self.completed_items = file.readlines()
             file.close()
         except Exception:
             pass
